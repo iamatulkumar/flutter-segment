@@ -16,6 +16,8 @@ A new flutter plugin project.
   s.public_header_files = 'Classes/**/*.h'
   s.dependency 'Flutter'
   s.dependency 'Analytics', '3.7.0'
+  s.dependency 'Mixpanel', '3.4.9'
+  s.dependency 'Segment-Mixpanel', '1.4.0'
 
   s.ios.deployment_target = '8.0'
 

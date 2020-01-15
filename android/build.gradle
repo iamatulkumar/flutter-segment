@@ -34,5 +34,7 @@ android {
 
     dependencies {
         implementation 'com.segment.analytics.android:analytics:4.5.0-beta.0'
+        implementation 'com.segment.analytics.android.integrations:mixpanel:+'
+        implementation "com.mixpanel.android:mixpanel-android:5.+"
     }
 }

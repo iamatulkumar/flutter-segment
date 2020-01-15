@@ -1,5 +1,6 @@
 #import "FlutterSegmentPlugin.h"
 #import <Analytics/SEGAnalytics.h>
+#import <Segment_Mixpanel/SEGMixpanelIntegrationFactory.h>
 
 @implementation FlutterSegmentPlugin
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
@@ -9,11 +10,28 @@
         NSString *writeKey = [dict objectForKey: @"com.claimsforce.segment.WRITE_KEY"];
         SEGAnalyticsConfiguration *configuration = [SEGAnalyticsConfiguration configurationWithWriteKey:writeKey];
         configuration.trackApplicationLifecycleEvents = YES;
+
+        [configuration use:[SEGMixpanelIntegrationFactory instance]];
         [SEGAnalytics setupWithConfiguration:configuration];
+        
+        if ([[UIApplication sharedApplication] respondsToSelector:@selector(registerForRemoteNotifications)]) {
+           UIUserNotificationType types = UIUserNotificationTypeAlert | UIUserNotificationTypeSound |
+           UIUserNotificationTypeBadge;
+           UIUserNotificationSettings *settings = [UIUserNotificationSettings settingsForTypes:types
+           categories:nil];
+           [[UIApplication sharedApplication] registerUserNotificationSettings:settings];
+           [[UIApplication sharedApplication] registerForRemoteNotifications];
+         } else {
+           UIRemoteNotificationType types = UIRemoteNotificationTypeAlert | UIRemoteNotificationTypeSound |
+           UIRemoteNotificationTypeBadge;
+           [[UIApplication sharedApplication] registerForRemoteNotificationTypes:types];
+         }
+        
         FlutterMethodChannel* channel = [FlutterMethodChannel
                                          methodChannelWithName:@"flutter_segment"
                                          binaryMessenger:[registrar messenger]];
         FlutterSegmentPlugin* instance = [[FlutterSegmentPlugin alloc] init];
+        [registrar addApplicationDelegate:instance];
         [registrar addMethodCallDelegate:instance channel:channel];
     }
     @catch (NSException *exception) {
@@ -62,6 +80,21 @@
     @catch (NSException *exception) {
         result([FlutterError errorWithCode:@"FlutterSegmentException" message:[exception reason] details: nil]);
     }
+}
+
+- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+    [[SEGAnalytics sharedAnalytics] registeredForRemoteNotificationsWithDeviceToken:deviceToken];
+}
+
+// A notification has been received while the app is running in the foreground
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
+  [[SEGAnalytics sharedAnalytics] receivedRemoteNotification:userInfo];
+}
+
+// iOS 8+ only
+- (void)application:(UIApplication *)application didRegisterUserNotificationSettings:(UIUserNotificationSettings *)notificationSettings {
+  // register to receive notifications
+  [application registerForRemoteNotifications];
 }
 
 - (void)track:(FlutterMethodCall*)call result:(FlutterResult)result {
@@ -135,6 +168,7 @@
 - (void)reset:(FlutterResult)result {
     @try {
         [[SEGAnalytics sharedAnalytics] reset];
+        [[SEGAnalytics sharedAnalytics] flush];
         result([NSNumber numberWithBool:YES]);
     }
     @catch (NSException *exception) {
